@@ -1,0 +1,8 @@
+services:
+  pipeline:
+    build:
+      context: .
+      dockerfile: pipeline/Dockerfile
+    container_name: dsp-campaign-pipeline
+    env_file:
+      - .env
