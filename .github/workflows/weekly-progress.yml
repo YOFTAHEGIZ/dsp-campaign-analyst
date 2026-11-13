@@ -1,37 +1,71 @@
-
-name: Weekly Campaign Progress Email
+name: Weekly progress email
 
 on:
   schedule:
+    # Every Friday at 15:00 UTC = 18:00 East Africa Time (cron always runs in UTC).
+    # GitHub can start scheduled runs a few minutes late when it is busy.
     - cron: "0 15 * * 5"
 
-  # Allows us to test the workflow manually
+  # Run it by hand from the Actions tab, to test. "dry run" builds the email without sending it.
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build the email but do not send it (download the preview from the run)"
+        type: boolean
+        default: false
 
 permissions:
-  contents: read
+  contents: read        # read the code and the commit history
+  issues: read          # closed and open issues, milestones
+  pull-requests: read   # merged pull requests
+
+# Never two runs at the same time
+concurrency:
+  group: weekly-progress
+  cancel-in-progress: false
 
 jobs:
   send-weekly-report:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0   # full history, to read this week's commits
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
-      - name: Send weekly progress email
+      # The script only uses the Python standard library: nothing to install.
+      - name: Build and send the weekly progress email
         env:
+          # Email (repository secrets)
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_SERVER_HOST: ${{ secrets.EMAIL_SERVER_HOST }}
           EMAIL_SERVER_PORT: ${{ secrets.EMAIL_SERVER_PORT }}
           EMAIL_SERVER_USER: ${{ secrets.EMAIL_SERVER_USER }}
           EMAIL_SERVER_PASSWORD: ${{ secrets.EMAIL_SERVER_PASSWORD }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
-        run: python scripts/send_weekly_progress.py
+          # Links and timeline (repository variables, not secret)
+          DASHBOARD_URL: ${{ vars.DASHBOARD_URL }}
+          CHALLENGE_START_DATE: ${{ vars.CHALLENGE_START_DATE }}
+          PROGRESS_STATUS: ${{ vars.PROGRESS_STATUS }}
+          # Read issues and pull requests of this repo (given by GitHub to every run)
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            python scripts/send_weekly_progress.py --dry-run
+          else
+            python scripts/send_weekly_progress.py
+          fi
+
+      - name: Keep the email preview (dry run)
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-progress-preview
+          path: reports/weekly_progress_preview.html

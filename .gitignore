@@ -21,3 +21,5 @@ data/
 
 # VS Code local settings
 .vscode/
+# Weekly email preview (made by --dry-run)
+reports/weekly_progress_preview.html
