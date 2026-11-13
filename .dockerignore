@@ -1,0 +1,13 @@
+# Keep the build small: never send these to Docker
+data/
+1458/
+.env
+.env.*
+.venv/
+**/__pycache__/
+.pytest_cache/
+.ipynb_checkpoints/
+dashboard/
+notebooks/
+reports/
+.git/

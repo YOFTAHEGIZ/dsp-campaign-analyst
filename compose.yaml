@@ -1,8 +1,44 @@
+# The batch run: everything at once, one command
+#   docker compose up --build pipeline
+#
+# The hourly pipeline: a tick every TICK_SECONDS, running until you stop it
+#   docker compose up --build -d scheduler     # start in the background
+#   docker compose logs -f scheduler           # watch the ticks
+#   docker compose stop scheduler              # stop (finishes the current tick first)
+#
+# The tests
+#   docker compose run --rm tests
+
+x-pipeline: &pipeline
+  build:
+    context: .
+    dockerfile: pipeline/Dockerfile
+  env_file:
+    - .env
+  volumes:
+    # Share folders with the container instead of copying them into the image:
+    - ./data:/app/data            # raw .bz2 files in, Parquet + warehouse.duckdb out
+    - ./reports:/app/reports      # the data quality report appears in your reports/ folder
+
 services:
   pipeline:
+    <<: *pipeline
+    container_name: dsp-campaign-pipeline
+
+  scheduler:
+    <<: *pipeline
+    container_name: dsp-campaign-scheduler
+    command: python pipeline/src/pipeline/scheduler.py
+    environment:
+      # 3600 = one hour of data per real hour. For a demo use 60 (the week replays in ~3 hours).
+      # Values in .env win over these defaults.
+      TICK_SECONDS: ${TICK_SECONDS:-3600}
+      HOURS_PER_TICK: ${HOURS_PER_TICK:-1}
+    restart: unless-stopped       # starts again after a crash or a reboot of Docker
+    stop_grace_period: 3m         # time to finish the current tick on "docker compose stop"
+
+  tests:
     build:
       context: .
       dockerfile: pipeline/Dockerfile
-    container_name: dsp-campaign-pipeline
-    env_file:
-      - .env
+    command: python -m pytest -q pipeline/tests
