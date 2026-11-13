@@ -1,0 +1,5 @@
+duckdb
+pyarrow
+psycopg[binary]
+python-dotenv
+pytest
