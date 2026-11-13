@@ -1,0 +1,10 @@
+[
+  {
+    "title": "Browser drives CTR: Safari vs Maxthon",
+    "number": "Safari 0.479% (95% CI 0.450%\u20130.509%, +644% vs rest) vs Maxthon 0.036% (-50%); 279 of 481 segment tests survive the multiple-comparison correction",
+    "chart": "05_top_dimension.png",
+    "confidence": "High (q < 0.001)",
+    "meaning": "Shift budget toward Safari and test a lower bid on Maxthon. This is a correlation, so confirm with a controlled bid test.",
+    "notebook": "05_segments"
+  }
+]

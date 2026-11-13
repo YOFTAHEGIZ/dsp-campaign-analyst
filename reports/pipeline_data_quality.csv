@@ -1,0 +1,19 @@
+check,severity,value,status,means
+impressions loaded,FAIL,12237081,PASS,
+days with impressions,INFO,7,INFO,
+advertisers with impressions,INFO,5,INFO,
+advertisers with bids,INFO,1,INFO,
+advertisers in the bid summary,INFO,5,INFO,
+impression timestamps that did not parse,FAIL,0,PASS,
+click timestamps that did not parse,FAIL,0,PASS,
+impressions without a paying price,WARN,0,PASS,
+duplicate impressions removed,INFO,6,INFO,
+duplicate clicks removed,INFO,0,INFO,
+clicks with no matching impression,WARN,104,WARN,a click we cannot link to an impression
+conversions with no matching impression,WARN,13,WARN,a conversion we cannot link to an impression
+clicks loaded,INFO,9978,INFO,
+conversions loaded,INFO,418,INFO,
+more clicks than impressions,FAIL,0,PASS,
+impressions paid above the bid,WARN,191091,WARN,a second-price auction should never charge more than the bid
+impressions paid below the floor price,WARN,64113,WARN,the floor is the minimum price
+bids loaded,WARN,14701496,PASS,

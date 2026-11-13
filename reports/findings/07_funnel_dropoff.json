@@ -1,0 +1,18 @@
+[
+  {
+    "title": "It takes 6,090 bids to get one click",
+    "number": "53,289,330 bids \u2192 12,237,087 impressions (23.0% win rate) \u2192 8,751 clicks (0.072% CTR) \u2192 391 post-click conversions",
+    "chart": "07_funnel_per_campaign.png",
+    "confidence": "High (exact counts)",
+    "meaning": "Most volume is lost in the auction, but the impressions nobody clicks are the paid loss. Improving CTR is the cheapest way to lower cost per click.",
+    "notebook": "07_funnel_dropoff"
+  },
+  {
+    "title": "Campaign 3386: slot format 0 loses the most clicks",
+    "number": "356 fewer clicks than at the campaign's average CTR (0.056% vs 0.072%, on 2,176,840 impressions)",
+    "chart": "07_dropoff_segments.png",
+    "confidence": "High (z = 9.0)",
+    "meaning": "Lower the bid or exclude this segment in a test, and move the budget to segments that click above average.",
+    "notebook": "07_funnel_dropoff"
+  }
+]

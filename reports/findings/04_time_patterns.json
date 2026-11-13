@@ -1,0 +1,18 @@
+[
+  {
+    "title": "CTR peaks at 23:00 and bottoms at 09:00",
+    "number": "0.087% (95% CI 0.080%\u20130.095%) vs 0.053% (0.046%\u20130.060%); busiest hour 00:00 with 8.3% of impressions",
+    "chart": "04_hour_of_day.png",
+    "confidence": "Medium (intervals don't overlap)",
+    "meaning": "Dayparting: raise bids in the responsive hours and lower them in the weak ones, then measure the change in cost per click.",
+    "notebook": "04_time_patterns"
+  },
+  {
+    "title": "Unusual days: 1458 on 08 Jun, 1458 on 11 Jun, 3358 on 09 Jun, 3358 on 10 Jun, 3358 on 12 Jun, 3386 on 09 Jun, 3386 on 11 Jun, 3386 on 12 Jun, 3427 on 08 Jun, 3476 on 07 Jun, 3476 on 08 Jun, 3476 on 10 Jun, 3476 on 12 Jun",
+    "number": "1458 08 Jun: impressions z = +nan, CTR z = +3.4; 1458 11 Jun: impressions z = -0.1, CTR z = +3.3; 3358 09 Jun: impressions z = -4.4, CTR z = -1.3; 3358 10 Jun: impressions z = +15.1, CTR z = +9.9; 3358 12 Jun: impressions z = +0.9, CTR z = +3.8; 3386 09 Jun: impressions z = -0.7, CTR z = +1.1; 3386 11 Jun: impressions z = +0.1, CTR z = +4.1; 3386 12 Jun: impressions z = -0.6, CTR z = +5.0; 3427 08 Jun: impressions z = +nan, CTR z = +3.1; 3476 07 Jun: impressions z = +nan, CTR z = -3.3; 3476 08 Jun: impressions z = +nan, CTR z = +3.7; 3476 10 Jun: impressions z = -2.1, CTR z = +1.9; 3476 12 Jun: impressions z = -5.3, CTR z = -1.6",
+    "chart": "04_daily_by_campaign.png",
+    "confidence": "High for |z| > 3, but only 7 days of baseline",
+    "meaning": "A volume spike or drop usually means a budget or pacing change, not a market change. The daily report should alert on these automatically.",
+    "notebook": "04_time_patterns"
+  }
+]

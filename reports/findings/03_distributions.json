@@ -1,0 +1,10 @@
+[
+  {
+    "title": "Prices are right-skewed: median 70, mean 78, p99 260",
+    "number": "paying price p50 70 / p90 166 / p99 260, skewness 1.34; the top 10% of impressions take 28% of spend; 11% of bids have no floor",
+    "chart": "03_hist_log.png",
+    "confidence": "High (exact over 12,237,087 impressions)",
+    "meaning": "Report median and p90 prices, not just averages: a few expensive auctions move the mean. A bid cap near the p90 price limits exposure to the expensive tail.",
+    "notebook": "03_distributions"
+  }
+]

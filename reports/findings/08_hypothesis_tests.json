@@ -1,0 +1,26 @@
+[
+  {
+    "title": "H1: Mobile and tablet CTR is lower than desktop CTR: rejected: the difference is significant but goes the other way",
+    "number": "mobile + tablet 0.393% vs desktop 0.061%: +540% (95% CI +507% to +573%), p = 1",
+    "chart": "08_hypotheses.png",
+    "confidence": "Low (p = 1.00, not significant)",
+    "meaning": "Not a reliable lever: don't move budget on this difference.",
+    "notebook": "08_hypothesis_tests"
+  },
+  {
+    "title": "H3: Slots with a floor price have a higher CTR than slots without one: rejected: the difference is significant but goes the other way",
+    "number": "floor > 0 0.064% vs no floor 0.088%: -28% (95% CI -32% to -24%), p = 1",
+    "chart": "08_hypotheses.png",
+    "confidence": "Low (p = 1.00, not significant)",
+    "meaning": "Not a reliable lever: don't move budget on this difference.",
+    "notebook": "08_hypothesis_tests"
+  },
+  {
+    "title": "H2: Evening CTR (18-24h) is higher than daytime CTR (8-18h): supported",
+    "number": "evening 18-24h 0.082% vs daytime 8-18h 0.064%: +28% (95% CI +22% to +33%), p = 4.28e-25",
+    "chart": "08_hypotheses.png",
+    "confidence": "High (p < 0.001)",
+    "meaning": "A real difference worth acting on with a bid adjustment, after a controlled test.",
+    "notebook": "08_hypothesis_tests"
+  }
+]

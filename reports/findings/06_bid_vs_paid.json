@@ -1,0 +1,18 @@
+[
+  {
+    "title": "We pay 29% of what we bid",
+    "number": "average bid 268 vs average paid 78 (median gap 202); 1458: 23%; 3358: 40%; 3386: 26%; 3427: 34%; 3476: 32%",
+    "chart": "06_gap.png",
+    "confidence": "High (exact over 12,237,087 impressions)",
+    "meaning": "Second-price auctions hide a large overbid. Under first-price auctions the same bids would cost 3.4\u00d7 as much, so bid shading toward the market price is the main saving.",
+    "notebook": "06_bid_vs_paid"
+  },
+  {
+    "title": "Floor prices set the price on high-floor inventory",
+    "number": "floor set the price on 21.2% of all wins, and 53% of wins with floors above 100; win rate 37.1% there vs 63.4% with no floor",
+    "chart": "06_floor.png",
+    "confidence": "High (exact counts)",
+    "meaning": "High-floor inventory is priced by the publisher, not by competition. Check that its CTR justifies the price (Notebook 05, floor band) before bidding into it.",
+    "notebook": "06_bid_vs_paid"
+  }
+]

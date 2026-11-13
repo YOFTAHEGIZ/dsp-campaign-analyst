@@ -1,0 +1,10 @@
+[
+  {
+    "title": "Simpson's paradox: campaign 1458 vs 3386 flips when split by floor band",
+    "number": "pooled +9% (p = 0.0038) vs within floor bands -0% (CMH p = 0.94); 15 of 99 comparisons reverse",
+    "chart": "09_simpson.png",
+    "confidence": "Low (p = 0.94, not significant)",
+    "meaning": "Pooled numbers can point budget the wrong way here. Always compare within a campaign, or adjust for the mix.",
+    "notebook": "09_simpsons_check"
+  }
+]

@@ -1,0 +1,10 @@
+[
+  {
+    "title": "One impression in 1,398 is clicked; one bid in 4.4 wins",
+    "number": "53,289,330 bids \u2192 12,237,081 impressions (win rate 23.0%) \u2192 8,751 clicked (CTR 0.072%, 95% CI 0.070%\u20130.073%) \u2192 391 post-click conversions; CPM 78.3, CPC 110",
+    "chart": "02_funnel.png",
+    "confidence": "High (exact counts, reconciled with the dataset paper)",
+    "meaning": "Expected value of 1,000 impressions = 1,000 \u00d7 P(click) \u00d7 P(conversion | click) \u00d7 value per conversion = 0.72 clicks \u00d7 4.5% \u00d7 value. To hit a target CPA T, CPM must stay below 0.032 \u00d7 T. This is the yardstick for every bid.",
+    "notebook": "02_funnel_validation"
+  }
+]
