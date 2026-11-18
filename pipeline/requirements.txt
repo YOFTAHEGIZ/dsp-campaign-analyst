@@ -2,4 +2,5 @@ duckdb
 pyarrow
 psycopg[binary]
 python-dotenv
+requests
 pytest

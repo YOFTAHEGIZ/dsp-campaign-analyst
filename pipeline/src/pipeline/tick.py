@@ -21,6 +21,9 @@ One tick:
   4. Send Neon only the days that changed: the new hour's day, the days of the impressions that
      this hour's clicks and conversions belong to, and the day before (late links).
   5. Only when all that worked, move the watermark.
+  6. "What changed": find the unusual hours again (anomalies.py) and explain up to
+     EXPLAIN_PER_TICK new ones with AI (explain.py, default 3). If the AI is down, the tick still
+     succeeds: the unexplained events wait for the next tick.
 
 Idempotent: if a tick fails halfway, the watermark has not moved and the next tick redoes the
 same hour. If there is no new hour, a tick does nothing. Running it twice never doubles anything.
@@ -170,11 +173,26 @@ def tick(hours=1, catch_up=False, rebuild=False):
     set_watermark(con, target)
     con.close()
 
+    # 6. What changed: anomalies + AI explanations (never breaks the tick)
+    what_changed(quiet)
+
     left = len([h for h in pending if h > target])
     print(f"  arrived: {impressions:,} impressions, {clicks:,} clicks, {conversions:,} conversions")
     print(f"  sent to Neon: {len(days)} day(s) ({', '.join(f'{d:%d %b}' for d in days)})")
     print(f"  watermark: {label(target)} · {left} hour(s) still to come · {time.time() - start:.0f}s")
     return target
+
+
+def what_changed(quiet=True):
+    per_tick = int(os.getenv("EXPLAIN_PER_TICK", "3"))
+    try:
+        import anomalies
+        import explain
+        found = anomalies.detect(quiet=True)
+        passed, withheld = explain.run(max_explain=per_tick, quiet=True) if per_tick > 0 else (0, 0)
+        print(f"  what changed: {len(found)} flags; {passed} explained, {withheld} withheld this tick")
+    except Exception as e:  # AI or network trouble must not stop the data pipeline
+        print(f"  what changed: skipped ({type(e).__name__}: {str(e).splitlines()[0][:150]})")
 
 
 def status():
