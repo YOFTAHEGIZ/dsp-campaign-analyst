@@ -1,6 +1,9 @@
 // One shared connection pool to Neon Postgres. NEON_DATABASE_URL lives in .env.local (local)
 // and in the Vercel project's environment variables (production), never in the code.
-import { Pool } from "pg";
+import { Pool, types } from "pg";
+
+// DATE columns come back as plain "YYYY-MM-DD" text, never as a JS Date shifted by time zone.
+types.setTypeParser(1082, (v: string) => v);
 
 declare global {
   var _pgPool: Pool | undefined;
@@ -13,7 +16,7 @@ export const hasDatabase = Boolean(DATABASE_URL);
 /** Neon's connection string ends in ?sslmode=require. The pg library prints a security
  *  warning for that setting, so we take sslmode out of the string and turn SSL on
  *  ourselves instead: the connection is encrypted and Neon's certificate is verified. */
-function poolConfig(raw: string) {
+export function poolConfig(raw: string) {
   const url = new URL(raw);
   const mode = url.searchParams.get("sslmode");
   const useSsl = (mode !== null && mode !== "disable") || url.hostname.endsWith("neon.tech");

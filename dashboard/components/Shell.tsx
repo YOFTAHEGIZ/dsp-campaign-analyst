@@ -6,7 +6,7 @@ import { filterQuery } from "@/lib/url";
 import type { Advertiser, Day, Filters as FilterValues, Status } from "@/lib/data";
 
 export default function Shell({ tab, advertisers, days, filters, lastLoad, status, children }: {
-  tab: "performance" | "auction" | "changes"; advertisers: Advertiser[]; days: Day[]; filters: FilterValues;
+  tab: "performance" | "auction" | "changes" | "ask"; advertisers: Advertiser[]; days: Day[]; filters: FilterValues;
   lastLoad: string | null; status: Status; children: React.ReactNode;
 }) {
   const q = filterQuery(filters, days);      // the tabs keep the current filters
@@ -37,6 +37,7 @@ export default function Shell({ tab, advertisers, days, filters, lastLoad, statu
         <Link href={`/${q}`} className={tab === "performance" ? "on" : ""}>Performance &amp; pacing</Link>
         <Link href={`/auction${q}`} className={tab === "auction" ? "on" : ""}>Auction insights</Link>
         <Link href={`/changes${q}`} className={tab === "changes" ? "on" : ""}>What changed</Link>
+        <Link href={`/ask${q}`} className={tab === "ask" ? "on" : ""}>Ask the data</Link>
       </nav>
       {children}
       <AutoRefresh seconds={60} />
