@@ -177,3 +177,46 @@ export async function getLastLoad(): Promise<string | null> {
     return null; // load_log does not exist yet
   }
 }
+
+// ---- What changed (week 3) ---------------------------------------------------
+// Unusual hours found by the pipeline (anomalies) and their judged explanations. The AI ran in the
+// pipeline, not here: this page only reads what was stored, so it is fast and costs nothing.
+
+export type Flag = { hour: number; metric: string; value: number; baseline: number; change: number; z: number };
+export type ChangeEvent = {
+  advertiser_id: number; report_date: string; hour: number; end_hour: number;
+  status: "pass" | "withheld"; headline: string | null; drivers: string[] | null;
+  confidence: "high" | "medium" | "low" | null; note: string | null; sql: string[] | null;
+  provider: string | null; flags: Flag[];
+};
+export type Changes = { events: ChangeEvent[]; waiting: number; ready: boolean };
+
+export async function getChanges(f: Filters): Promise<Changes> {
+  const w = where(f);
+  try {
+    const events = await query<ChangeEvent>(
+      `SELECT e.advertiser_id::int AS advertiser_id, e.report_date::text AS report_date, e.hour,
+              COALESCE(e.end_hour, e.hour) AS end_hour, e.status, e.headline, e.drivers, e.confidence,
+              e.note, e.sql, e.provider,
+              COALESCE((SELECT json_agg(json_build_object('hour', a.hour, 'metric', a.metric, 'value', a.value,
+                                         'baseline', a.baseline, 'change', a.change, 'z', a.z)
+                                        ORDER BY a.hour, a.metric)
+                        FROM anomalies a
+                        WHERE a.advertiser_id = e.advertiser_id AND a.report_date = e.report_date
+                          AND a.hour BETWEEN e.hour AND COALESCE(e.end_hour, e.hour)), '[]') AS flags
+       FROM explanations e
+       WHERE ${w.sql.replace("report_date", "e.report_date").replace("advertiser_id", "e.advertiser_id")}`,
+      w.params);
+    const [{ n }] = await query<{ n: string }>(
+      `SELECT count(*) AS n FROM anomalies a
+       WHERE ${w.sql.replace("report_date", "a.report_date").replace("advertiser_id", "a.advertiser_id")}
+         AND NOT EXISTS (SELECT 1 FROM explanations e
+                         WHERE e.advertiser_id = a.advertiser_id AND e.report_date = a.report_date
+                           AND a.hour BETWEEN e.hour AND COALESCE(e.end_hour, e.hour))`, w.params);
+    const strength = (e: ChangeEvent) => Math.max(0, ...e.flags.map((x) => Math.abs(x.z)));
+    events.sort((a, b) => strength(b) - strength(a));
+    return { events, waiting: Number(n), ready: true };
+  } catch {
+    return { events: [], waiting: 0, ready: false };   // tables not created yet: run the pipeline
+  }
+}
