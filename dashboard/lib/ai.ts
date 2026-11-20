@@ -15,7 +15,8 @@
 import { Pool } from "pg";
 import { poolConfig, query as ownerQuery } from "./db";
 
-const AI_URL = process.env.AI_DATABASE_URL;
+// Tolerate common copy-paste slips: surrounding quotes, spaces, or "AI_DATABASE_URL=" pasted into the value
+const AI_URL = process.env.AI_DATABASE_URL?.trim().replace(/^AI_DATABASE_URL=/, "").replace(/^["']|["']$/g, "").trim();
 const GEMINI_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? process.env.GEMINI_API_KEY;
 const GROQ_KEY = process.env.GROQ_API_KEY;
 const COHERE_KEY = process.env.COHERE_API_KEY;
@@ -64,7 +65,16 @@ declare global {
 
 function aiPool(): Pool {
   if (!AI_URL) throw new Error("AI_DATABASE_URL is not set");
-  if (!globalThis._aiPool) globalThis._aiPool = new Pool({ ...poolConfig(AI_URL), max: 2 });
+  if (!globalThis._aiPool) {
+    let config;
+    try {
+      config = poolConfig(AI_URL);
+    } catch {
+      throw new Error("AI_DATABASE_URL is not a valid address: it must start with postgresql://ai_reader: " +
+                      "(check dashboard/.env.local on your laptop, or the Vercel environment variable)");
+    }
+    globalThis._aiPool = new Pool({ ...config, max: 2 });
+  }
   return globalThis._aiPool;
 }
 
@@ -117,7 +127,7 @@ const plain = (v: unknown) =>
 
 export type QueryResult = { sql: string; columns: string[]; rows: unknown[][]; truncated: boolean };
 
-async function runSql(raw: string): Promise<QueryResult> {
+export async function runSql(raw: string): Promise<QueryResult> {
   const check = checkSql(raw);
   if (!check.ok) throw new Error(`refused by guardrail: ${check.error}`);
   const client = await aiPool().connect();
@@ -148,7 +158,13 @@ const TOOL_DEFS = [
 ];
 
 async function runTool(name: string, args: Record<string, unknown>, queries: QueryResult[]) {
-  if (name === "get_schema") return await getSchema();
+  if (name === "get_schema") {
+    try {
+      return await getSchema();
+    } catch (e) {
+      throw new Error(`database: ${(e as Error).message}`);   // a setup problem: no model can fix it
+    }
+  }
   if (name !== "run_sql") return { error: `unknown tool ${name}` };
   if (queries.length >= LIMITS.queries) return { error: `query limit reached (${LIMITS.queries}); answer with what you have` };
   try {
@@ -162,10 +178,10 @@ async function runTool(name: string, args: Record<string, unknown>, queries: Que
 
 // ---------------------------------------------------------------- calling the models
 
-async function post(url: string, headers: Record<string, string>, body: unknown) {
+export async function post(url: string, headers: Record<string, string>, body: unknown) {
   for (const wait of [1000, 3000, -1]) {
     const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", ...headers },
-                                   body: JSON.stringify(body), signal: AbortSignal.timeout(25000) });
+                                   body: JSON.stringify(body), signal: AbortSignal.timeout(40000) });
     if (res.ok) return res.json();
     const text = (await res.text()).replace(/\s+/g, " ").slice(0, 300);
     if ([429, 500, 502, 503, 504].includes(res.status) && wait > 0) {
@@ -177,16 +193,17 @@ async function post(url: string, headers: Record<string, string>, body: unknown)
   throw new Error("unreachable");
 }
 
-type Log = { runId: string; attempt: number };
+export type Log = { runId: string; attempt: number; purpose?: string };
 
-async function logCall(log: Log, row: { step: string; provider: string; model: string; prompt: string;
+export async function logCall(log: Log, row: { step: string; provider: string; model: string; prompt: string;
   output?: string | null; verdict?: string | null; reason?: string | null; ms: number; error?: string | null }) {
   try {
     await ownerQuery(
       `INSERT INTO llm_calls (run_id, purpose, step, attempt, provider, model, prompt, output, verdict, reason, latency_ms, error)
-       VALUES ($1, 'ask', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+       VALUES ($1, $12, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
       [log.runId, row.step, log.attempt, row.provider, row.model, row.prompt.slice(0, 20000),
-       row.output?.slice(0, 20000) ?? null, row.verdict ?? null, row.reason ?? null, row.ms, row.error ?? null]);
+       row.output?.slice(0, 20000) ?? null, row.verdict ?? null, row.reason ?? null, row.ms, row.error ?? null,
+       log.purpose ?? "ask"]);
   } catch { /* logging must never break the answer */ }
 }
 
@@ -281,6 +298,53 @@ async function agent(prompt: string, log: Log) {
   throw new Error(errors.join(" | ") || "no model key set");
 }
 
+// ---------------------------------------------------------------- JSON answers (insights panel)
+
+/** One JSON answer from DATA, Gemini first, Groq if Gemini fails. Returns the parsed object. */
+export async function generateJson(system: string, prompt: string, schema: object, log: Log) {
+  const parse = (t: string) => JSON.parse(String(t).replace(/^```(json)?|```$/g, "").trim());
+  const errors: string[] = [];
+  if (GEMINI_KEY) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+    const base = { systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: prompt }] }] };
+    const start = Date.now();
+    try {
+      let data;
+      try {
+        data = await post(url, { "x-goog-api-key": GEMINI_KEY }, { ...base, generationConfig:
+          { temperature: 0.2, responseMimeType: "application/json", responseJsonSchema: schema } });
+      } catch (e) {
+        if (!/HTTP 400/.test((e as Error).message)) throw e;       // older API: schema in the prompt only
+        data = await post(url, { "x-goog-api-key": GEMINI_KEY }, { ...base, generationConfig:
+          { temperature: 0.2, responseMimeType: "application/json" } });
+      }
+      const text = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
+      await logCall(log, { step: "generate", provider: "gemini", model: GEMINI_MODEL, prompt, output: text, ms: Date.now() - start });
+      return { output: parse(text), provider: "gemini" };
+    } catch (e) {
+      await logCall(log, { step: "generate", provider: "gemini", model: GEMINI_MODEL, prompt, ms: Date.now() - start,
+                           error: (e as Error).message });
+      errors.push(`gemini: ${(e as Error).message}`);
+    }
+  }
+  if (GROQ_KEY) {
+    const start = Date.now();
+    try {
+      const data = await post("https://api.groq.com/openai/v1/chat/completions", { Authorization: `Bearer ${GROQ_KEY}` },
+        { model: GROQ_MODEL, temperature: 0.2, response_format: { type: "json_object" },
+          messages: [{ role: "system", content: system }, { role: "user", content: `${prompt}\n\nSCHEMA:\n${JSON.stringify(schema)}` }] });
+      const text = data.choices[0].message.content;
+      await logCall(log, { step: "generate", provider: "groq", model: GROQ_MODEL, prompt, output: text, ms: Date.now() - start });
+      return { output: parse(text), provider: "groq" };
+    } catch (e) {
+      await logCall(log, { step: "generate", provider: "groq", model: GROQ_MODEL, prompt, ms: Date.now() - start,
+                           error: (e as Error).message });
+      errors.push(`groq: ${(e as Error).message}`);
+    }
+  }
+  throw new Error(errors.join(" | ") || "no model key set");
+}
+
 // ---------------------------------------------------------------- the judge
 
 const JUDGE = `You are a strict fact checker for an advertising dashboard.
@@ -295,7 +359,7 @@ Return "fail" if ANY of these is true:
 An ANSWER that honestly says the data cannot answer the question, with no numbers, is a "pass".
 Answer with JSON only: {"verdict": "pass"|"fail", "reason": "one sentence", "problems": ["each wrong claim"]}`;
 
-async function judge(question: string, answer: string, queries: QueryResult[], log: Log) {
+export async function judge(question: string, answer: string, queries: QueryResult[], log: Log) {
   const data = queries.map((q) => ({ sql: q.sql, columns: q.columns, rows: q.rows.slice(0, LIMITS.rowsToModel) }));
   const prompt = `QUESTION:\n${question}\n\nDATA:\n${JSON.stringify(data)}\n\nANSWER:\n${answer}`;
   const start = Date.now();
@@ -370,6 +434,7 @@ export async function ask(question: string): Promise<AskResult> {
 const visits = new Map<string, number[]>();
 
 export function allowVisitor(id: string) {
+  if (process.env.NODE_ENV !== "production") return true;   // no limit on your laptop (test suite)
   const now = Date.now();
   const recent = (visits.get(id) ?? []).filter((t) => now - t < LIMITS.perMinutes * 60_000);
   if (recent.length >= LIMITS.perVisitor) return false;
