@@ -295,8 +295,10 @@ def _parse_json_or_none(text):
 GENERATE_RULES = """You are a careful advertising analyst writing for a busy manager.
 Rules:
 - Use ONLY the numbers and facts in DATA. Never use outside knowledge about these advertisers.
-- Every number you write must appear in DATA. You may round it (0.07234 -> 0.072%) and add
-  thousands separators, but never calculate a new number (no sums, differences or ratios of your own).
+- Every number you write must appear in DATA. You may round it and add thousands separators, but never
+  calculate a new number (no sums, differences or ratios of your own).
+- Percentages: a column named ..._pct is already a percentage (23.0 -> 23%), never multiply it by 100.
+  Only a fraction between 0 and 1 becomes a percentage (0.0723 -> 7.23%).
 - If DATA does not support a claim, leave the claim out. Never guess causes; say "the data shows" only
   what DATA shows.
 - Plain language, short sentences.
@@ -340,8 +342,10 @@ JUDGE_SCHEMA = {
 JUDGE_RULES = """You are a strict fact checker for an advertising dashboard.
 You get DATA (database query results) and an ANSWER written from it. Check the ANSWER claim by claim.
 Return "fail" if ANY of these is true:
-- a number in the ANSWER does not appear in DATA (rounding a DATA value is allowed; percentages may be
-  written from a fraction in DATA, e.g. 0.0723 -> 7.23%);
+- a number in the ANSWER does not appear in DATA (rounding a DATA value is allowed);
+- a percentage in the ANSWER is not the DATA value: a column named ..._pct is already a percentage
+  (23.0 -> 23%; 2,300% is WRONG); only a fraction between 0 and 1 may be multiplied by 100 (0.0723 -> 7.23%);
+- a share or rate (CTR, win rate, share of the bid) in the ANSWER is above 100%;
 - a comparison, ranking, direction (up/down, highest/lowest) or trend is not supported by DATA;
 - the ANSWER names an advertiser, day, hour, exchange or segment that is not in DATA;
 - the ANSWER states a cause that DATA does not show.

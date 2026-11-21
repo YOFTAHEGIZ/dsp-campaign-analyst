@@ -40,6 +40,8 @@ Rates are ratios of sums, never averages of daily rates:
   average bid = SUM(sum_bid_price) / SUM(bids)            average paid = SUM(sum_paying_price) / SUM(wins)
   paid / bid = SUM(sum_paying_price) / SUM(sum_bid_price_won)
 Use NULLIF(x, 0) when dividing, and ROUND(..., n) on numeric values (cast to numeric first).
+Percentages: compute them as 100.0 * ... and name the column with _pct (e.g. paid_vs_bid_pct = 23.0 means 23%).
+A column without _pct that holds a share is a fraction (0.23 means 23%).
 Hours are 0 to 23, China time. Prices are iPinYou units per 1,000 impressions, not dollars.`;
 
 const TABLES: Record<string, string> = {
@@ -212,7 +214,10 @@ Tools: get_schema (tables, columns, how to compute each KPI) and run_sql (one re
 Rules:
 1. Call get_schema first, then run_sql. Answer ONLY from run_sql results. Never invent or estimate numbers.
 2. Do every calculation in SQL (sums, ratios, percentages, rounding). In the answer, copy numbers exactly as
-   the query returned them; you may add %, thousands separators or round further.
+   the query returned them; you may add thousands separators or round further.
+   Percentages: a column named ..._pct is ALREADY a percentage: write 23.0 as 23%, never multiply it by 100.
+   Only a fraction (a share between 0 and 1, column without _pct) becomes a percentage: 0.23 -> 23%.
+   Sanity check before answering: a share, rate or "how much of" can't be above 100%.
 3. Rates are ratios of sums, never averages of daily rates. Cast advertiser_id::int and report_date::date.
 4. If a query fails, read the error, fix the SQL and try again.
 5. If the data cannot answer the question (not in these tables, about the future, about other companies or
@@ -350,8 +355,10 @@ export async function generateJson(system: string, prompt: string, schema: objec
 const JUDGE = `You are a strict fact checker for an advertising dashboard.
 You get a QUESTION, DATA (the results of the SQL queries that were run) and an ANSWER. Check the ANSWER claim by claim.
 Return "fail" if ANY of these is true:
-- a number in the ANSWER does not appear in DATA (rounding a DATA value is allowed; a fraction in DATA may be
-  written as a percentage, e.g. 0.0723 -> 7.23%);
+- a number in the ANSWER does not appear in DATA (rounding a DATA value is allowed);
+- a percentage in the ANSWER is not the DATA value: a column named ..._pct is already a percentage
+  (23.0 -> 23%; 2,300% is WRONG); only a fraction between 0 and 1 may be multiplied by 100 (0.23 -> 23%);
+- a share, rate, CTR, win rate or "share of the bid" in the ANSWER is above 100% (impossible here);
 - a comparison, ranking, direction or trend in the ANSWER is not supported by DATA;
 - the ANSWER names an advertiser, day, hour, exchange or segment that is not in DATA;
 - the ANSWER states a cause DATA does not show;
